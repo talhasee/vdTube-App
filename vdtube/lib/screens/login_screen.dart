@@ -27,6 +27,13 @@ class _LoginScreenState extends State<LoginScreen> {
   );
 
   @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -54,18 +61,24 @@ class _LoginScreenState extends State<LoginScreen> {
         body: json.encode(payload),
       );
 
+      logger.d("Response status: ${response.statusCode}");
+      logger.d("RESPONSE - $response");
+
       if (response.statusCode == 200) {
         logger.d('Login successful: ${response.body}');
 
         final responseBody = json.decode(response.body);
         String accessToken = responseBody['data']['accessToken'];
         String refreshToken = responseBody['data']['refreshToken'];
+        String username = responseBody['data']['user']['userName'];
 
         logger.d('Access Token - $accessToken');
         logger.d('Refresh Token - $refreshToken');
+        logger.d('USERNAME - $username');
 
         await secureStorage.write(key: 'accessToken', value: accessToken);
         await secureStorage.write(key: 'refreshToken', value: refreshToken);
+        await secureStorage.write(key: 'username', value: username);
 
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
@@ -76,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _showErrorDialog('Login Failed', 'Incorrect email or password.');
       }
     } catch (e) {
-      logger.d('Error - $e');
+      logger.e('Error HERE - $e');
       _showErrorDialog('Error', 'Something went wrong. Please try again.');
     } finally {
       setState(() {
@@ -151,8 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    prefixIcon:
-                        const Icon(Icons.lock, color: Colors.redAccent),
+                    prefixIcon: const Icon(Icons.lock, color: Colors.redAccent),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _isPasswordVisible

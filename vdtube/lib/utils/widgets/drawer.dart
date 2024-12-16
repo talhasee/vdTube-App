@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:vdtube/constants/constants.dart';
+import 'package:vdtube/screens/home_screen.dart';
 
 // Utility class for Drawer
 class AppDrawer extends StatelessWidget {
@@ -31,7 +32,7 @@ class AppDrawer extends StatelessWidget {
             title: Text('Liked Videos'),
             onTap: () {
               // Navigate to the liked videos screen
-              Navigator.pushNamed(context, '/likedVideos');
+              // Navigator.pushNamed(context, '/likedVideos');
             },
           ),
           ListTile(
@@ -39,7 +40,7 @@ class AppDrawer extends StatelessWidget {
             title: Text('History'),
             onTap: () {
               // Navigate to the history screen
-              Navigator.pushNamed(context, '/history');
+              // Navigator.pushNamed(context, '/history');
             },
           ),
           ListTile(
@@ -47,15 +48,15 @@ class AppDrawer extends StatelessWidget {
             title: Text('My Content'),
             onTap: () {
               // Navigate to my content screen
-              Navigator.pushNamed(context, '/myContent');
+              // Navigator.pushNamed(context, '/myContent');
             },
           ),
           ListTile(
             leading: Icon(Icons.collections),
-            title: Text('Collections'),
+            title: Text('Dashboard'),
             onTap: () {
               // Navigate to collections screen
-              Navigator.pushNamed(context, '/collections');
+              Navigator.pushNamed(context, '/dashboard');
             },
           ),
           ListTile(
@@ -63,21 +64,54 @@ class AppDrawer extends StatelessWidget {
             title: Text('Subscriptions'),
             onTap: () {
               // Navigate to subscriptions screen
-              Navigator.pushNamed(context, '/subscriptions');
+              logger.d("Subscription clicked");
+              // Navigator.pushNamed(context, '/subscriptions');
             },
           ),
           // Log out item at the bottom of the drawer
           Divider(),
+
           ListTile(
             leading: Icon(Icons.logout),
             title: Text('Log Out'),
             onTap: () async {
-              // Log out logic here (can use a method to clear tokens or reset state)
-              //Deleting tokens and logging user out
-              await Constants.deleteAccessToken();
-              await Constants.deleteRefreshToken();
-              
-              Navigator.pushReplacementNamed(context, '/login');
+              logger.d('Logout button tapped'); // Debug print
+              try {
+                // Delete all secure storage keys
+                await Constants.deleteAll();
+
+                // Confirm deletion by checking if all keys are removed
+                String? accessToken = await Constants.getAccessToken();
+                String? refreshToken = await Constants.getRefreshToken();
+                String? username = await Constants.getUsername();
+
+                if (accessToken == null &&
+                    refreshToken == null &&
+                    username == null) {
+                  Constants.logger
+                      .d('Successfully logged out - All keys cleared.');
+
+                  if (!context.mounted) {
+                    logger.d('Not mounted ERROR');
+                  }
+
+                  Navigator.pushReplacementNamed(context, '/login');
+                } else {
+                  Constants.logger
+                      .e('Logout failed - Some keys are still present.');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Logout failed. Please try again.')),
+                  );
+                }
+              } catch (e) {
+                Constants.logger.e('Error during logout: $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content:
+                          Text('An error occurred. Please try again later.')),
+                );
+              }
             },
           ),
         ],

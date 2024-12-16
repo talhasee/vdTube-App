@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:vdtube/screens/dashboard.dart';
 import 'package:vdtube/screens/home_screen.dart';
 import 'package:vdtube/screens/login_screen.dart';
 import 'package:vdtube/screens/signup_screen.dart';
@@ -53,6 +54,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
         '/signup': (context) => const SignUpScreen(),
+        '/dashboard': (context) => const DashboardScreen()
       },
     );
   }
