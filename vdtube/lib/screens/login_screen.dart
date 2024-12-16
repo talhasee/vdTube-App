@@ -16,46 +16,35 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Create TextEditingControllers for email and password
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
-  //Secure storage instance
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
-
-  //Variable to track loading state
   bool isLoading = false;
-
-  @override
-  void dispose() {
-    // Dispose controllers to prevent memory leaks
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
+  bool _isPasswordVisible = false; // To toggle password visibility
 
   var logger = Logger(
     printer: PrettyPrinter(),
   );
 
-  //API LOGIN METHOD
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   Future<void> _login() async {
-    // Get the entered text
     String email = _emailController.text;
     String password = _passwordController.text;
 
-    // Log email and password to console
     logger.d('Email: $email');
     logger.d('Password: $password');
-    // print('Email: $email');
-    // print('Password: $password');
 
     setState(() {
       isLoading = true;
     });
 
-    String apiUrl = '$BASE_URL/user/login'; //ENDPOINT
-
+    String apiUrl = '$BASE_URL/user/login';
     Map<String, String> payload = {'email': email, 'password': password};
 
     try {
@@ -66,30 +55,29 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (response.statusCode == 200) {
-        logger.d('Login successfull: ${response.body}');
+        logger.d('Login successful: ${response.body}');
 
-        //Extract tokens
         final responseBody = json.decode(response.body);
-
         String accessToken = responseBody['data']['accessToken'];
         String refreshToken = responseBody['data']['refreshToken'];
 
         logger.d('Access Token - $accessToken');
         logger.d('Refresh Token - $refreshToken');
 
-        //Saving tokens securely
         await secureStorage.write(key: 'accessToken', value: accessToken);
         await secureStorage.write(key: 'refreshToken', value: refreshToken);
 
-        //Navigating to home screen on successfull Login
         if (mounted) {
-          Navigator.pushNamed(context, '/home');
+          Navigator.pushReplacementNamed(context, '/home');
         }
       } else {
-        logger.d('Failed to log In: ${response.statusCode}');
+        logger.d('Failed to log in: ${response.statusCode}');
+        // Show an error dialog if login fails
+        _showErrorDialog('Login Failed', 'Incorrect email or password.');
       }
     } catch (e) {
       logger.d('Error - $e');
+      _showErrorDialog('Error', 'Something went wrong. Please try again.');
     } finally {
       setState(() {
         isLoading = false;
@@ -97,17 +85,34 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Center(
-          child: const Text(
-            'Login', //TITLE TEXT
-            textAlign: TextAlign.right, //TEXT ALIGNMENT
+        title: const Center(
+          child: Text(
+            'Login',
             style: TextStyle(
-              fontSize: 34.0, // Increase font size
-              fontWeight: FontWeight.bold, // Optional: Make it bold
+              fontSize: 34.0,
+              fontWeight: FontWeight.bold,
               color: Colors.amber,
             ),
           ),
@@ -115,7 +120,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       body: Stack(
         children: [
-          // Main content
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
@@ -128,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 20),
                 TextField(
-                  controller: _emailController, // Assign the controller
+                  controller: _emailController,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     labelText: 'Email',
@@ -136,21 +140,37 @@ class _LoginScreenState extends State<LoginScreen> {
                     filled: true,
                     fillColor: Colors.grey[800],
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 15),
                 TextField(
-                  controller: _passwordController, // Assign the controller
-                  obscureText: true,
+                  controller: _passwordController,
+                  obscureText: !_isPasswordVisible,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock, color: Colors.redAccent),
+                    prefixIcon:
+                        const Icon(Icons.lock, color: Colors.redAccent),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isPasswordVisible = !_isPasswordVisible;
+                        });
+                      },
+                    ),
                     filled: true,
                     fillColor: Colors.grey[800],
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -160,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueGrey[800],
                     ),
-                    onPressed: _login, // Call the login method on press
+                    onPressed: _login,
                     child: const Text('Login'),
                   ),
                 ),
@@ -174,14 +194,12 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           ),
-
-          // Show spinner and blur the background when loading
           if (isLoading)
             Positioned.fill(
               child: GestureDetector(
-                onTap: () {}, // Prevent interaction with background
+                onTap: () {},
                 child: Container(
-                  color: Colors.black.withOpacity(0.5), // Dim the background
+                  color: Colors.black.withOpacity(0.5),
                   child: Center(
                     child: LoadingAnimationWidget.threeRotatingDots(
                         color: Colors.white, size: 50),
