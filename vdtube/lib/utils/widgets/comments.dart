@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -5,14 +6,16 @@ import 'dart:convert';
 import 'package:vdtube/constants/constants.dart';
 
 const BASE_URL = Constants.baseUrl;
+var logger = Constants.logger;
+Timer? debounce;
 
 // Comment model class
 class Comment {
   final String id;
   final String content;
   final String createdAt;
-  final int likesCount;
-  final bool isLiked;
+  int likesCount;
+  bool isLiked;
 
   Comment({
     required this.id,
@@ -69,6 +72,7 @@ class CommentService {
       List<Comment> comments = (data as List)
           .map((commentJson) => Comment.fromJson(commentJson))
           .toList();
+
       return comments;
     } else {
       throw Exception('Failed to load comments');
@@ -117,6 +121,28 @@ class _CommentsWidgetState extends State<CommentsWidget> {
   void initState() {
     super.initState();
     _commentsFuture = CommentService.fetchComments(widget.videoId);
+    _fetchInitialComments();
+  }
+
+  @override
+  void dispose() {
+    debounce?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchInitialComments() async {
+    try {
+      final comments = await CommentService.fetchComments(widget.videoId);
+      if(!mounted) {
+        return;
+      }
+        
+      setState(() {
+        _comments.addAll(comments);
+      });
+    } catch (e) {
+      logger.e('Error in adding Comments - $e');
+    }
   }
 
   void _addComment(String content) async {
@@ -173,11 +199,10 @@ class _CommentsWidgetState extends State<CommentsWidget> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Center(
-                child: LoadingAnimationWidget.staggeredDotsWave(
-                      color: Colors.blueGrey.shade200,
-                      size: 40,
-                    )
-              );
+                  child: LoadingAnimationWidget.staggeredDotsWave(
+                color: Colors.blueGrey.shade200,
+                size: 40,
+              ));
             } else if (snapshot.hasError) {
               return Center(child: Text('Error: ${snapshot.error}'));
             } else if (snapshot.hasData) {
@@ -197,7 +222,9 @@ class _CommentsWidgetState extends State<CommentsWidget> {
                   ),
                 );
               }
-              _comments.addAll(comments); // Add fetched comments to the list
+
+              logger.d('_comments - $_comments\ncomments - $comments');
+              // _comments.addAll(comments); // Add fetched comments to the list
               return Column(
                 children: [
                   ..._comments.map((comment) {
@@ -222,7 +249,9 @@ class _CommentsWidgetState extends State<CommentsWidget> {
 class CommentCard extends StatelessWidget {
   final Comment comment;
 
-  const CommentCard({Key? key, required this.comment}) : super(key: key);
+  const CommentCard({super.key, required this.comment});
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -244,33 +273,63 @@ class CommentCard extends StatelessWidget {
               style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.thumb_up,
-                    color: comment.isLiked ? Colors.blue : Colors.white,
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    // Handle like button click
-                  },
-                ),
-                Text('${comment.likesCount}'),
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.thumb_down,
-                      color: Colors.white, size: 20),
-                  onPressed: () {
-                    // Handle dislike button click
-                  },
-                ),
-                Text('0'), // Assuming no dislike functionality yet
-              ],
-            ),
+            StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState) {
+                return Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        Icons.thumb_up,
+                        color: comment.isLiked ? Colors.blue : Colors.white,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          //Closing already exisiting timer
+                          debounce?.cancel();
+
+                          //Starting a new debouncing timer
+                          debounce = Timer(const Duration(milliseconds: 5000),
+                              () => togglingCommentLike(comment));
+
+                          comment.isLiked = !comment.isLiked;
+                          comment.likesCount += comment.isLiked ? 1 : -1;
+                        });
+
+                        //Api call for toggling like
+                      },
+                    ),
+                    Text('${comment.likesCount}'),
+                  ],
+                );
+              },
+            )
           ],
         ),
       ),
     );
+  }
+}
+
+Future<void> togglingCommentLike(Comment comment) async {
+  final url = '$BASE_URL/like/toggle/c/${comment.id}';
+
+  String? accessToken = await Constants.getAccessToken();
+  String? refreshToken = await Constants.getRefreshToken();
+
+  var headers = {
+    'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken',
+  };
+
+  try {
+    final response = await http.post(Uri.parse(url), headers: headers);
+
+    if (response.statusCode == 200) {
+      logger.d('Successfully toggled the Like on comment');
+    } else {
+      logger.d('Failed to like the comment: ${response.reasonPhrase}');
+    }
+  } catch (e) {
+    logger.e('Error while toggling the like on comment');
   }
 }
