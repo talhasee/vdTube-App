@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -32,13 +33,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool _isVideoInitialized = false;
   bool _isChewieInitialized = false; // Track if ChewieController is initialized
   bool _isDescriptionExpanded = false; //To manage description expansion
+  Timer? debounce;
 
-  // Comment Data
+  // Likes temporary Data storing locally
+  bool isLiked = true;
+  int likesCount = 0;
 
   @override
   void initState() {
     super.initState();
-    
   }
 
   // Fetch Access Token
@@ -49,6 +52,53 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   // Fetch Refresh Token
   Future<String?> getRefreshToken() async {
     return await secureStorage.read(key: 'refreshToken');
+  }
+
+  //Handle Liking
+  void handleLike(bool isLiked) {
+    //Cancle exisitng debounce timer
+    debounce?.cancel();
+
+    //Starting a new debouncing timer
+    debounce = Timer(
+        const Duration(milliseconds: 5000), () => sendLikeToServer(isLiked));
+
+
+    setState(() {
+      this.isLiked = !isLiked;
+      if (isLiked) {
+        likesCount--;
+      } else {
+        likesCount++;
+      }
+
+
+      logger.d('isLiked - $isLiked.........likesCount - $likesCount');
+    });
+  }
+
+  //Api Call to register the like
+  Future<void> sendLikeToServer(bool isLiked) async {
+    final url = '$BASE_URL/like/toggle/v/${widget.videoId}';
+
+    String? accessToken = await getAccessToken();
+    String? refreshToken = await getRefreshToken();
+
+    var headers = {
+      'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken',
+    };
+
+    try {
+      final response = await http.post(Uri.parse(url), headers: headers);
+
+      if (response.statusCode == 200) {
+        logger.d('Successfully updated the like status to--- $isLiked----');
+      } else {
+        logger.d('Failed to update the like: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      logger.d('Error sending the like to server: $e');
+    }
   }
 
   Future<Map<String, dynamic>> fetchVideoDetails() async {
@@ -69,6 +119,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
         final responseData = json.decode(response.body);
         if (responseData['data'] is List && responseData['data'].isNotEmpty) {
+          isLiked = responseData['data'][0]['isLiked'];
+          likesCount = responseData['data'][0]['likesCount'];
           return responseData['data'][0]; // Return first video object
         } else {
           throw Exception('Invalid video data');
@@ -129,7 +181,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   void dispose() {
+    //Dispose the debounce timer
+    debounce?.cancel();
+
     // Dispose the VideoPlayerController to free resources
+
     if (_isVideoInitialized) {
       _videoPlayerController.dispose();
     }
@@ -189,13 +245,69 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
                   // Video Title
                   Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      videoData['title'] ?? 'No Title',
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            videoData['title'] ?? 'No Title',
+                            style: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+
+                          //Likes Details
+                          StatefulBuilder(
+                            builder:
+                                (BuildContext context, StateSetter setState) {
+                              return Row(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () {
+                                      // Like handling logic
+                                      // handleLike(isLiked);
+                                       debounce?.cancel();
+
+                                      //Starting a new debouncing timer
+                                      debounce = Timer(
+                                          const Duration(milliseconds: 5000), () => sendLikeToServer(isLiked));
+
+
+                                      setState(() {
+                                        if (isLiked) {
+                                          likesCount = (likesCount - 1 ) > 0 ? likesCount - 1 : 0;
+                                        } else {
+                                          likesCount++;
+                                        }
+                                        isLiked = !isLiked;
+
+
+                                        logger.d('isLiked - $isLiked.........likesCount - $likesCount');
+                                      });
+                                      
+                                    },
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.thumb_up,
+                                          color: isLiked
+                                              ? Colors.blue
+                                              : Colors.white,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '$likesCount', // Show the likes count
+                                          style: const TextStyle(fontSize: 16),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      )),
 
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -279,12 +391,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         style: TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
-                  CommentsWidget(videoId: widget.videoId), // Replace with actual videoId
+                  CommentsWidget(
+                      videoId: widget.videoId), // Replace with actual videoId
                 ],
               ),
             );
           } else {
-            return const Center(child: Text('No Data Available')); 
+            return const Center(child: Text('No Data Available'));
           }
         },
       ),
