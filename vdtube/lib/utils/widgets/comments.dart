@@ -64,18 +64,23 @@ class CommentService {
       'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken',
     };
 
-    var url = Uri.parse('$BASE_URL/comment/$videoId?page=1&limit=10');
-    final response = await http.get(url, headers: headers);
+    try {
+      var url = Uri.parse('$BASE_URL/comment/$videoId?page=1&limit=10');
+      final response = await http.get(url, headers: headers);
 
-    if (response.statusCode == 200) {
-      var data = json.decode(response.body)['data']['docs'];
-      List<Comment> comments = (data as List)
-          .map((commentJson) => Comment.fromJson(commentJson))
-          .toList();
+      if (response.statusCode == 200) {
+        var data = json.decode(response.body)['data']['docs'];
+        List<Comment> comments = (data as List)
+            .map((commentJson) => Comment.fromJson(commentJson))
+            .toList();
 
-      return comments;
-    } else {
-      throw Exception('Failed to load comments');
+        return comments;
+      } else {
+        throw Exception('Failed to load comments');
+      }
+    } catch (e) {
+      logger.e('Error in loading comments - $e');
+        throw Exception('Failed to load comments');
     }
   }
 
@@ -133,10 +138,10 @@ class _CommentsWidgetState extends State<CommentsWidget> {
   Future<void> _fetchInitialComments() async {
     try {
       final comments = await CommentService.fetchComments(widget.videoId);
-      if(!mounted) {
+      if (!mounted) {
         return;
       }
-        
+
       setState(() {
         _comments.addAll(comments);
       });
@@ -250,8 +255,6 @@ class CommentCard extends StatelessWidget {
   final Comment comment;
 
   const CommentCard({super.key, required this.comment});
-
-
 
   @override
   Widget build(BuildContext context) {
