@@ -32,6 +32,7 @@ class AppDrawer extends StatelessWidget {
             title: Text('Liked Videos'),
             onTap: () {
               // Navigate to the liked videos screen
+              Navigator.pop(context); // Close the drawer
               // Navigator.pushNamed(context, '/likedVideos');
             },
           ),
@@ -40,6 +41,7 @@ class AppDrawer extends StatelessWidget {
             title: Text('History'),
             onTap: () {
               // Navigate to the history screen
+              Navigator.pop(context); // Close the drawer
               // Navigator.pushNamed(context, '/history');
             },
           ),
@@ -48,6 +50,7 @@ class AppDrawer extends StatelessWidget {
             title: Text('My Content'),
             onTap: () {
               // Navigate to my content screen
+              Navigator.pop(context); // Close the drawer
               // Navigator.pushNamed(context, '/myContent');
             },
           ),
@@ -56,6 +59,7 @@ class AppDrawer extends StatelessWidget {
             title: Text('Dashboard'),
             onTap: () {
               // Navigate to collections screen
+              Navigator.pop(context); // Close the drawer
               Navigator.pushNamed(context, '/dashboard');
             },
           ),
@@ -64,6 +68,7 @@ class AppDrawer extends StatelessWidget {
             title: Text('Subscriptions'),
             onTap: () {
               // Navigate to subscriptions screen
+              Navigator.pop(context); // Close the drawer
               logger.d("Subscription clicked");
               // Navigator.pushNamed(context, '/subscriptions');
             },

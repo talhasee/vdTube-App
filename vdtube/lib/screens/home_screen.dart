@@ -96,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       logger.d('calling again');
-
       homeVideos(); // Fetch more videos when nearing the bottom
     }
   }
@@ -174,38 +173,51 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       drawer: const AppDrawer(),
       body: SafeArea(
-        child: videos.isEmpty
-            ? Center(
-                child: LoadingAnimationWidget.threeRotatingDots(
-                    color: Colors.white, size: 50)) // Loading indicator
-            : ListView.builder(
-                controller: _scrollController,
-                physics: const BouncingScrollPhysics(),
-                itemCount:
-                    videos.length + (isLoading ? 1 : 0), // Add a loader item
-                itemBuilder: (context, index) {
-                  if (index < videos.length) {
-                    final video = videos[index];
-                    return VideoCard(
-                      videoId: video['_id'],
-                      title: video['title'] ?? 'No Title',
-                      videoLength: formatDuration(video['duration']),
-                      thumbnailUrl: video['thumbnail'] ??
-                          'https://via.placeholder.com/320x180',
-                    );
-                  } else {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: LoadingAnimationWidget.threeRotatingDots(
-                            color: Colors.white, size: 50),
-                      ),
-                    ); // Show loader at the end
-                  }
-                },
-              ),
+        child: RefreshIndicator(
+          onRefresh: _refreshPage, // Triggered when pulling to refresh
+          child: videos.isEmpty
+              ? Center(
+                  child: LoadingAnimationWidget.threeRotatingDots(
+                      color: Colors.white, size: 50)) // Loading indicator
+              : ListView.builder(
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount:
+                      videos.length + (isLoading ? 1 : 0), // Add a loader item
+                  itemBuilder: (context, index) {
+                    if (index < videos.length) {
+                      final video = videos[index];
+                      return VideoCard(
+                        videoId: video['_id'],
+                        title: video['title'] ?? 'No Title',
+                        videoLength: formatDuration(video['duration']),
+                        thumbnailUrl: video['thumbnail'] ??
+                            'https://via.placeholder.com/320x180',
+                      );
+                    } else {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: LoadingAnimationWidget.threeRotatingDots(
+                              color: Colors.white, size: 50),
+                        ),
+                      ); // Show loader at the end
+                    }
+                  },
+                ),
+        ),
       ),
     );
+  }
+
+  // Function to refresh the page
+  Future<void> _refreshPage() async {
+    setState(() {
+      videos.clear(); // Clear existing videos
+      currentPage = 1; // Reset pagination
+      totalPages = 1; // Reset total pages
+    });
+    await homeVideos(); // Fetch the latest videos
   }
 
   String formatDuration(double? duration) {
