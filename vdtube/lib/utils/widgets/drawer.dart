@@ -51,7 +51,7 @@ class AppDrawer extends StatelessWidget {
             onTap: () {
               // Navigate to my content screen
               Navigator.pop(context); // Close the drawer
-              // Navigator.pushNamed(context, '/myContent');
+              Navigator.pushNamed(context, '/addVideo');
             },
           ),
           ListTile(

@@ -4,6 +4,7 @@ import 'package:vdtube/screens/dashboard.dart';
 import 'package:vdtube/screens/home_screen.dart';
 import 'package:vdtube/screens/login_screen.dart';
 import 'package:vdtube/screens/signup_screen.dart';
+import 'package:vdtube/screens/upload_video_screen.dart';
 import 'package:vdtube/utils/splash_screen.dart';
 
 void main() {
@@ -54,7 +55,8 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
         '/signup': (context) => const SignUpScreen(),
-        '/dashboard': (context) => const DashboardScreen()
+        '/dashboard': (context) => const DashboardScreen(),
+        '/addVideo': (context) => const AddVideoScreen(),
       },
     );
   }
