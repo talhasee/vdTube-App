@@ -11,6 +11,7 @@ import 'package:vdtube/constants/constants.dart';
 import 'package:http/http.dart' as http;
 
 const BASE_URL = Constants.baseUrl;
+const uploadUrl = Constants.baseUrlForUploads;
 var logger = Constants.logger;
 Timer? debounceTimer;
 
@@ -102,9 +103,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       logger.e('Error in loading stats - $e');
     } finally {
       fetchDashboardVideos();
-      setState(() {
-        isDashboardLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isDashboardLoading = false;
+        });
+      }
     }
   }
 
@@ -126,18 +129,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         var data = responseData['data'];
 
-        setState(() {
-          videoList = data;
-        });
+        if (mounted) {
+          setState(() {
+            videoList = data;
+          });
+        }
       } else {
         logger.d('Error in fetching your videos - ${response.reasonPhrase}');
       }
     } catch (e) {
       logger.e('Error fetching dashboard videos - $e');
     } finally {
-      setState(() {
-        isVideosLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isVideosLoading = false;
+        });
+      }
     }
   }
 
@@ -241,7 +248,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken'
     };
 
-    var url = Uri.parse('$BASE_URL/video/v/$videoId');
+    //Using different render server url for uploading not vercel one
+    var url = Uri.parse('$uploadUrl/video/v/$videoId');
 
     var request = http.MultipartRequest('PATCH', url);
 
@@ -292,9 +300,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       showErrorDialog('An error occurred, please try again.');
     } finally {
       // Ensure setState is called even if there's an error
-      setState(() {
-        isUpdateVideoLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isUpdateVideoLoading = false;
+        });
+      }
     }
   }
 
@@ -311,9 +321,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: const Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop(); // Close the dialog
-                setState(() {
-                  isUpdateVideoLoading = false;
-                });
+                if (mounted) {
+                  setState(() {
+                    isUpdateVideoLoading = false;
+                  });
+                }
               },
             ),
           ],
@@ -334,9 +346,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: const Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop();
-                setState(() {
-                  isUpdateVideoLoading = false;
-                });
+                if (mounted) {
+                  setState(() {
+                    isUpdateVideoLoading = false;
+                  });
+                }
               },
             ),
           ],
@@ -348,10 +362,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Function to delete a video by its ID
   void deleteVideo(String videoId) {
     logger.d('VIDEO ID FOR DELETE - $videoId');
-    setState(() {
-      // Remove the video from the list where _id matches
-      videoList.removeWhere((video) => video['_id'] == videoId);
-    });
+    if (mounted) {
+      setState(() {
+        // Remove the video from the list where _id matches
+        videoList.removeWhere((video) => video['_id'] == videoId);
+      });
+    }
 
     deleteVideoPermanently(videoId);
   }
@@ -420,21 +436,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Expanded(
               child: videoList.isEmpty && !isLoading
                   ? Center(
-                      child: 
-                      isVideosLoading?
-                        LoadingAnimationWidget.discreteCircle(
-                          color: Colors.white,
-                          size: 60,
-                          secondRingColor: Colors.black,
-                          thirdRingColor: Colors.purple)
-                        :Text(
-                          'Please drop some videos in My content section',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white70,
-                          ),
-                      ),
+                      child: isVideosLoading
+                          ? LoadingAnimationWidget.discreteCircle(
+                              color: Colors.white,
+                              size: 60,
+                              secondRingColor: Colors.black,
+                              thirdRingColor: Colors.purple)
+                          : Text(
+                              'Please drop some videos in My content section',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white70,
+                              ),
+                            ),
                     )
                   : ListView.builder(
                       itemCount: videoList.length,
@@ -483,10 +498,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           icon: Icon(Icons.refresh),
           onPressed: () {
             // Call your dummy function here
-            setState(() {
-              isDashboardLoading = true;
-              isVideosLoading = true;
-            });
+            if (mounted) {
+              setState(() {
+                isDashboardLoading = true;
+                isVideosLoading = true;
+              });
+            }
             loadData();
           },
         ),
@@ -764,9 +781,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _showUpdateVideoDialog(BuildContext context, dynamic video) {
     // Reset avatarImage to null
-    setState(() {
-      avatarImage = null;
-    });
+    if (mounted) {
+      setState(() {
+        avatarImage = null;
+      });
+    }
     String videoId = video['_id'];
     String title = video['title'] ?? '';
     String description = video['description'] ?? '';
@@ -873,9 +892,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     TextButton(
                       onPressed: () {
                         // Reset avatarImage to null
-                        setState(() {
-                          avatarImage = null;
-                        });
+                        if (mounted) {
+                          setState(() {
+                            avatarImage = null;
+                          });
+                        }
                         Navigator.pop(context); // Close the dialog
                       },
                       style: TextButton.styleFrom(
@@ -888,10 +909,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     TextButton(
                       onPressed: () async {
                         // Set the loading state to true
-
-                        setState(() {
-                          isUpdateVideoLoading = true;
-                        });
+                        if (mounted) {
+                          setState(() {
+                            isUpdateVideoLoading = true;
+                          });
+                        }
                         // Retrieve the updated title and description
                         String newTitle = titleController.text;
                         String newDescription = descriptionController.text;

@@ -1,17 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:vdtube/constants/constants.dart';
 import 'package:permission_handler/permission_handler.dart';
+// ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as path;
+// ignore: depend_on_referenced_packages
 import 'package:path_provider/path_provider.dart';
-import 'package:vdtube/screens/dashboard.dart'; // For file storage
 
 const BASE_URL = Constants.baseUrl;
+const uploadUrl = Constants.baseUrlForUploads;
 var logger = Constants.logger;
 
 class AddVideoScreen extends StatefulWidget {
@@ -275,7 +276,9 @@ class _AddVideoScreenState extends State<AddVideoScreen> {
       'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken'
     };
 
-    var url = Uri.parse('$BASE_URL/video/');
+    //For uploading task we'll use render server not verel
+    var url =
+        Uri.parse('$uploadUrl/video/');
 
     var request = http.MultipartRequest('POST', url);
 

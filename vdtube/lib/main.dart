@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:vdtube/screens/dashboard.dart';
 import 'package:vdtube/screens/home_screen.dart';
+import 'package:vdtube/screens/liked_video_screen.dart';
 import 'package:vdtube/screens/login_screen.dart';
 import 'package:vdtube/screens/signup_screen.dart';
 import 'package:vdtube/screens/upload_video_screen.dart';
+import 'package:vdtube/screens/watch_history_screen.dart';
 import 'package:vdtube/utils/splash_screen.dart';
+
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
 void main() {
   // Ensure the app is configured with the right system UI overlay style before running
@@ -50,6 +54,7 @@ class MyApp extends StatelessWidget {
           backgroundColor: Colors.transparent
         ),
       ),
+      navigatorObservers: [routeObserver],
       home: const SplashScreen(),
       routes: {
         '/login': (context) => const LoginScreen(),
@@ -57,6 +62,8 @@ class MyApp extends StatelessWidget {
         '/signup': (context) => const SignUpScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/addVideo': (context) => const AddVideoScreen(),
+        '/watchHistory': (context) => const WatchHistoryScreen(),
+        '/likedVideos': (context) => const LikedVideoScreen(),
       },
     );
   }

@@ -63,18 +63,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     debounce = Timer(
         const Duration(milliseconds: 5000), () => sendLikeToServer(isLiked));
 
-
-    setState(() {
-      this.isLiked = !isLiked;
-      if (isLiked) {
-        likesCount--;
-      } else {
-        likesCount++;
-      }
-
-
-      logger.d('isLiked - $isLiked.........likesCount - $likesCount');
-    });
+    if (mounted) {
+      setState(() {
+        this.isLiked = !isLiked;
+        if (isLiked) {
+          likesCount--;
+        } else {
+          likesCount++;
+        }
+        logger.d('isLiked - $isLiked.........likesCount - $likesCount');
+      });
+    }
   }
 
   //Api Call to register the like
@@ -151,27 +150,29 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     if (!mounted)
       return; // Ensure widget is still mounted before calling setState
 
-    setState(() {
-      _chewieController = ChewieController(
-        videoPlayerController: _videoPlayerController,
-        autoPlay: true,
-        looping: false,
-        allowFullScreen: true,
-        allowMuting: true,
-        allowPlaybackSpeedChanging: true,
-        placeholder: Center(
-          child: LoadingAnimationWidget.threeRotatingDots(
-              color: Colors.red, size: 50),
-        ),
-        errorBuilder: (context, errorMessage) {
-          return Center(
-            child: Text('Error playing video: $errorMessage'),
-          );
-        },
-      );
-      _isVideoInitialized = true;
-      _isChewieInitialized = true;
-    });
+    if (mounted) {
+      setState(() {
+        _chewieController = ChewieController(
+          videoPlayerController: _videoPlayerController,
+          autoPlay: true,
+          looping: false,
+          allowFullScreen: true,
+          allowMuting: true,
+          allowPlaybackSpeedChanging: true,
+          placeholder: Center(
+            child: LoadingAnimationWidget.threeRotatingDots(
+                color: Colors.red, size: 50),
+          ),
+          errorBuilder: (context, errorMessage) {
+            return Center(
+              child: Text('Error playing video: $errorMessage'),
+            );
+          },
+        );
+        _isVideoInitialized = true;
+        _isChewieInitialized = true;
+      });
+    }
   }
 
   String formatDate(String dateStr) {
@@ -211,7 +212,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   color: Colors.red, size: 50),
             );
           } else if (snapshot.hasError) {
-            return Center(child: Text('Error in snapshot: ${snapshot.error}'));
+            return Center(
+                child: Text(
+                    'Video not found: Go back and do pull-up refresh ${snapshot.error}'));
           } else if (snapshot.hasData) {
             final videoData = snapshot.data!;
             String videoUrl = videoData['videoFile'] ?? '';
@@ -266,25 +269,27 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                     onTap: () {
                                       // Like handling logic
                                       // handleLike(isLiked);
-                                       debounce?.cancel();
+                                      debounce?.cancel();
 
                                       //Starting a new debouncing timer
                                       debounce = Timer(
-                                          const Duration(milliseconds: 5000), () => sendLikeToServer(isLiked));
+                                          const Duration(milliseconds: 5000),
+                                          () => sendLikeToServer(isLiked));
+                                      if (mounted) {
+                                        setState(() {
+                                          if (isLiked) {
+                                            likesCount = (likesCount - 1) > 0
+                                                ? likesCount - 1
+                                                : 0;
+                                          } else {
+                                            likesCount++;
+                                          }
+                                          isLiked = !isLiked;
 
-
-                                      setState(() {
-                                        if (isLiked) {
-                                          likesCount = (likesCount - 1 ) > 0 ? likesCount - 1 : 0;
-                                        } else {
-                                          likesCount++;
-                                        }
-                                        isLiked = !isLiked;
-
-
-                                        logger.d('isLiked - $isLiked.........likesCount - $likesCount');
-                                      });
-                                      
+                                          logger.d(
+                                              'isLiked - $isLiked.........likesCount - $likesCount');
+                                        });
+                                      }
                                     },
                                     child: Row(
                                       children: [
@@ -339,9 +344,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       builder: (context, setState) {
                         return GestureDetector(
                           onTap: () {
-                            setState(() {
-                              _isDescriptionExpanded = !_isDescriptionExpanded;
-                            });
+                            if (mounted) {
+                              setState(() {
+                                _isDescriptionExpanded =
+                                    !_isDescriptionExpanded;
+                              });
+                            }
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),

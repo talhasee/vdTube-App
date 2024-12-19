@@ -80,7 +80,7 @@ class CommentService {
       }
     } catch (e) {
       logger.e('Error in loading comments - $e');
-        throw Exception('Failed to load comments');
+      throw Exception('Failed to load comments');
     }
   }
 
@@ -141,10 +141,11 @@ class _CommentsWidgetState extends State<CommentsWidget> {
       if (!mounted) {
         return;
       }
-
-      setState(() {
-        _comments.addAll(comments);
-      });
+      if (mounted) {
+        setState(() {
+          _comments.addAll(comments);
+        });
+      }
     } catch (e) {
       logger.e('Error in adding Comments - $e');
     }
@@ -162,9 +163,11 @@ class _CommentsWidgetState extends State<CommentsWidget> {
       isLiked: false,
     );
 
-    setState(() {
-      _comments.insert(0, newComment); // Add to the top of the list
-    });
+    if (mounted) {
+      setState(() {
+        _comments.insert(0, newComment); // Add to the top of the list
+      });
+    }
 
     // Send the comment to the backend
     try {
@@ -287,6 +290,7 @@ class CommentCard extends StatelessWidget {
                         size: 20,
                       ),
                       onPressed: () {
+          
                         setState(() {
                           //Closing already exisiting timer
                           debounce?.cancel();

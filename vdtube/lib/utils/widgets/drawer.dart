@@ -33,7 +33,7 @@ class AppDrawer extends StatelessWidget {
             onTap: () {
               // Navigate to the liked videos screen
               Navigator.pop(context); // Close the drawer
-              // Navigator.pushNamed(context, '/likedVideos');
+              Navigator.pushNamed(context, '/likedVideos');
             },
           ),
           ListTile(
@@ -42,7 +42,7 @@ class AppDrawer extends StatelessWidget {
             onTap: () {
               // Navigate to the history screen
               Navigator.pop(context); // Close the drawer
-              // Navigator.pushNamed(context, '/history');
+              Navigator.pushNamed(context, '/watchHistory');
             },
           ),
           ListTile(

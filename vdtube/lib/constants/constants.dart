@@ -2,7 +2,8 @@ import 'package:logger/logger.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class Constants {
-  static const String baseUrl =
+  static const String baseUrl = 'https://vdtube.vercel.app/api/v1';
+  static const String baseUrlForUploads =
       'https://backendproject-qo5y.onrender.com/api/v1';
   static var logger = Logger(
     printer: PrettyPrinter(),

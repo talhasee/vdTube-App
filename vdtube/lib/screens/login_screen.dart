@@ -30,7 +30,6 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     // TODO: implement initState
     super.initState();
-
   }
 
   @override
@@ -47,9 +46,11 @@ class _LoginScreenState extends State<LoginScreen> {
     logger.d('Email: $email');
     logger.d('Password: $password');
 
-    setState(() {
-      isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+      });
+    }
 
     String apiUrl = '$BASE_URL/user/login';
     Map<String, String> payload = {'email': email, 'password': password};
@@ -92,9 +93,11 @@ class _LoginScreenState extends State<LoginScreen> {
       logger.e('Error HERE - $e');
       _showErrorDialog('Error', 'Something went wrong. Please try again.');
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -173,9 +176,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.white,
                       ),
                       onPressed: () {
-                        setState(() {
-                          _isPasswordVisible = !_isPasswordVisible;
-                        });
+                        if (mounted) {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        }
                       },
                     ),
                     filled: true,

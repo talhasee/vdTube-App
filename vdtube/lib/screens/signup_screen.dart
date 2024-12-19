@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';  // For file storage
+import 'package:path_provider/path_provider.dart'; // For file storage
 import 'package:http/http.dart' as http;
 import 'package:vdtube/constants/constants.dart';
 import 'package:path/path.dart' as path;
-import 'package:permission_handler/permission_handler.dart';  // Add this import
+import 'package:permission_handler/permission_handler.dart'; // Add this import
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 const BASE_URL = Constants.baseUrl;
@@ -53,7 +53,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Permission Required'),
-          content: const Text('Please grant permission to access the gallery to upload an avatar image.'),
+          content: const Text(
+              'Please grant permission to access the gallery to upload an avatar image.'),
           actions: <Widget>[
             TextButton(
               child: const Text('OK'),
@@ -83,97 +84,104 @@ class _SignUpScreenState extends State<SignUpScreen> {
       // Copy the picked file to the temporary directory
       await File(pickedFile.path).copy(savedImage.path);
 
+      if (mounted) {
+        setState(() {
+          avatarImage = savedImage; // Set the saved image as the avatar
+        });
+      }
+    }
+  }
+
+  Future<void> signUpUser() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (mounted) {
       setState(() {
-        avatarImage = savedImage; // Set the saved image as the avatar
+        _isLoading = true; // Show loader and freeze background
       });
     }
-  }
 
-Future<void> signUpUser() async {
-  if (!_formKey.currentState!.validate()) {
-    return;
-  }
+    String? accessToken = await Constants.getAccessToken();
+    String? refreshToken = await Constants.getRefreshToken();
 
-  setState(() {
-    _isLoading = true; // Show loader and freeze background
-  });
+    var headers = {
+      'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken'
+    };
 
-  String? accessToken = await Constants.getAccessToken();
-  String? refreshToken = await Constants.getRefreshToken();
+    var request =
+        http.MultipartRequest('POST', Uri.parse('$BASE_URL/user/register'));
 
-  var headers = {
-    'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken'
-  };
-
-  var request = http.MultipartRequest(
-      'POST', Uri.parse('$BASE_URL/user/register'));
-
-  request.fields.addAll({
-    'fullName': fullNameController.text,
-    'userName': userNameController.text,
-    'email': emailController.text,
-    'password': passwordController.text,
-  });
-
-  // Attach the image file to the request if available
-  if (avatarImage != null) {
-    request.files.add(await http.MultipartFile.fromPath(
-      'avatar',
-      avatarImage!.path,
-    ));
-  }
-
-  request.headers.addAll(headers);
-
-  try {
-    http.StreamedResponse response = await request.send();
-
-    if (response.statusCode == 201) {
-      logger.d('Sign up successful');
-      logger.d(await response.stream.bytesToString());
-
-      // Delete the temporary image after successful registration
-      if (avatarImage != null) {
-        await avatarImage!.delete();
-      }
-
-      // Show success dialog
-      showSuccessDialog();
-    } else {
-      showErrorDialog('Sign up failed: ${response.reasonPhrase}');
-    }
-  } catch (e) {
-    logger.d('Error during sign up: $e');
-    showErrorDialog('An error occurred, please try again.');
-  } finally {
-    setState(() {
-      _isLoading = false; // Hide loader after the process
+    request.fields.addAll({
+      'fullName': fullNameController.text,
+      'userName': userNameController.text,
+      'email': emailController.text,
+      'password': passwordController.text,
     });
+
+    // Attach the image file to the request if available
+    if (avatarImage != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+        'avatar',
+        avatarImage!.path,
+      ));
+    }
+
+    request.headers.addAll(headers);
+
+    try {
+      http.StreamedResponse response = await request.send();
+
+      if (response.statusCode == 201) {
+        logger.d('Sign up successful');
+        logger.d(await response.stream.bytesToString());
+
+        // Delete the temporary image after successful registration
+        if (avatarImage != null) {
+          await avatarImage!.delete();
+        }
+
+        // Show success dialog
+        showSuccessDialog();
+      } else {
+        showErrorDialog('Sign up failed: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      logger.d('Error during sign up: $e');
+      showErrorDialog('An error occurred, please try again.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // Hide loader after the process
+        });
+      }
+    }
   }
-}
 
 // Show success dialog and navigate to login screen
-void showSuccessDialog() {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: const Text('Registration Successful'),
-        content: const Text('You can login now.'),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('OK'),
-            onPressed: () {
-              Navigator.of(context).pop(); // Close the dialog
-              // Navigate to login page after successful registration
-              Navigator.pushReplacementNamed(context, '/login'); // Adjust the route as needed
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
+  void showSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Registration Successful'),
+          content: const Text('You can login now.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                // Navigate to login page after successful registration
+                Navigator.pushReplacementNamed(
+                    context, '/login'); // Adjust the route as needed
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   // Show error dialog
   void showErrorDialog(String message) {
@@ -221,7 +229,8 @@ void showSuccessDialog() {
                               avatarImage!,
                               width: 100,
                               height: 100,
-                              fit: BoxFit.cover, // Fit the image into the circular area
+                              fit: BoxFit
+                                  .cover, // Fit the image into the circular area
                             )
                           : const Icon(
                               Icons.camera_alt,
@@ -267,7 +276,8 @@ void showSuccessDialog() {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your email';
                       }
-                      if (!RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+                      if (!RegExp(
+                              r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
                           .hasMatch(value)) {
                         return 'Please enter a valid email address';
                       }
@@ -296,7 +306,8 @@ void showSuccessDialog() {
                   // Retype Password Field
                   TextFormField(
                     controller: retypePasswordController,
-                    decoration: const InputDecoration(labelText: 'Retype Password'),
+                    decoration:
+                        const InputDecoration(labelText: 'Retype Password'),
                     obscureText: true,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -326,7 +337,7 @@ void showSuccessDialog() {
               color: Colors.black.withOpacity(0.5),
               child: Center(
                 child: LoadingAnimationWidget.threeRotatingDots(
-                  color: Colors.red, size: 50),
+                    color: Colors.red, size: 50),
               ),
             ),
         ],

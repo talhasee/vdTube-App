@@ -10,20 +10,19 @@ import 'package:vdtube/utils/widgets/drawer.dart';
 const BASE_URL = Constants.baseUrl;
 var logger = Constants.logger;
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class WatchHistoryScreen extends StatefulWidget {
+  const WatchHistoryScreen({super.key});
 
   @override
-  State<StatefulWidget> createState() => _HomeScreenState();
+  State<StatefulWidget> createState() => _WatchHistoryScreen();
 }
 
-class _HomeScreenState extends State<HomeScreen> with RouteAware {
+class _WatchHistoryScreen extends State<WatchHistoryScreen> {
   List<dynamic> videos = []; // Store fetched videos
   int currentPage = 1; // Start with the first page
   int totalPages = 1; // Total pages from the API response
   bool isLoading = false; // Track if a fetch is in progress
   final ScrollController _scrollController = ScrollController();
-  late RouteObserver<PageRoute> routeObserver;
 
   // Search related variables
   TextEditingController searchController = TextEditingController();
@@ -32,7 +31,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
-    routeObserver = RouteObserver<PageRoute>();
 
     // Set the system UI overlay style to ensure proper status bar appearance
     SystemChrome.setSystemUIOverlayStyle(
@@ -45,20 +43,76 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       ),
     );
 
-    homeVideos(); // Fetch initial videos
-    _scrollController.addListener(_scrollListener); // Add scroll listener
+    watchHistoryVideos(); // Fetch user history
+    // _scrollController.addListener(_scrollListener); // Add scroll listener
   }
+
+  Future<void> watchHistoryVideos() async{
+    if (isLoading) {
+      logger.d('No more videos - $currentPage......$totalPages');
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    // logger.d('QUERY IS - $searchQuery');
+
+    String? accessToken = await Constants.getAccessToken();
+    String? refreshToken = await Constants.getRefreshToken();
+
+    // Headers with tokens
+    var headers = {
+      'Accept': 'application/json',
+      'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken',
+    };
+
+    String apiUrl =
+        '$BASE_URL/user/history';
+    
+
+
+    try {
+      final response = await http.get(
+        Uri.parse(apiUrl),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        final fetchedVideos = responseBody['data'];
+
+        setState(() {
+          videos = fetchedVideos; // Append new videos
+          //SET TO ONE BECAUSE PAGING NOT IMPLEMENTED RIGHT NOW IN WATCH HISTORY VIDEOS
+          totalPages = 1; // Update total pages
+          currentPage =  1; // Next page to fetch
+
+        });
+        logger.d('Watch history Videos fetched successfully');
+      } else {
+        logger.d('Error fetching history videos: ${response.statusCode}');
+      }
+    } catch (e) {
+      logger.e('Error occurred in history videos - $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
 
   Future<void> homeVideos() async {
     if (isLoading || currentPage > totalPages) {
       logger.d('No more videos - $currentPage......$totalPages');
       return;
     }
-    if (mounted) {
-      setState(() {
-        isLoading = true;
-      });
-    }
+
+    setState(() {
+      isLoading = true;
+    });
 
     logger.d('QUERY IS - $searchQuery');
 
@@ -77,15 +131,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         final responseBody = json.decode(response.body);
         final fetchedVideos = responseBody['data']['docs'];
 
-        if (mounted) {
-          setState(() {
-            videos.addAll(fetchedVideos); // Append new videos
-            totalPages =
-                responseBody['data']['totalPages']; // Update total pages
-            currentPage =
-                responseBody['data']['page'] + 1; // Next page to fetch
-          });
-        }
+        setState(() {
+          videos.addAll(fetchedVideos); // Append new videos
+          totalPages = responseBody['data']['totalPages']; // Update total pages
+          currentPage = responseBody['data']['page'] + 1; // Next page to fetch
+        });
         logger.d('Videos fetched successfully');
       } else {
         logger.d('Error fetching videos: ${response.statusCode}');
@@ -93,11 +143,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     } catch (e) {
       logger.d('Error occurred - $e');
     } finally {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -110,20 +158,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
-  }
-
-  @override
-  void didPopNext() {
-    // This is called when the user returns to this screen
-    _refreshPage();
-  }
-
-  @override
   void dispose() {
-    routeObserver.unsubscribe(this);
     _scrollController.dispose(); // Clean up the controller
     searchController.dispose(); // Dispose the controller
     super.dispose();
@@ -134,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     return Scaffold(
       appBar: AppBar(
         title: searchQuery.isEmpty
-            ? const Text('📺vdTube')
+            ? const Text('📺Watch History')
             : TextField(
                 controller: searchController,
                 autofocus: true,
@@ -145,19 +180,15 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 ),
                 style: const TextStyle(color: Colors.black),
                 onChanged: (value) {
-                  if (mounted) {
-                    setState(() {
-                      searchQuery =
-                          value; // Update search query as the user types
-                    });
-                  }
+                  setState(() {
+                    searchQuery =
+                        value; // Update search query as the user types
+                  });
                 },
                 onSubmitted: (value) {
-                  if (mounted) {
-                    setState(() {
-                      searchQuery = value; // Set final query on submit
-                    });
-                  }
+                  setState(() {
+                    searchQuery = value; // Set final query on submit
+                  });
                   // Clear existing videos and reset pagination
                   videos.clear();
                   currentPage = 1;
@@ -178,22 +209,20 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             child: IconButton(
               icon: Icon(searchQuery.isEmpty ? Icons.search : Icons.close),
               onPressed: () {
-                if (mounted) {
-                  setState(() {
-                    if (searchQuery.isEmpty) {
-                      // Switch to search mode
-                      searchQuery = 'search'; // Trigger TextField to show
-                    } else {
-                      // Clear search
-                      searchController.clear();
-                      searchQuery = '';
-                      videos.clear();
-                      currentPage = 1;
-                      totalPages = 1;
-                      homeVideos();
-                    }
-                  });
-                }
+                setState(() {
+                  if (searchQuery.isEmpty) {
+                    // Switch to search mode
+                    searchQuery = 'search'; // Trigger TextField to show
+                  } else {
+                    // Clear search
+                    searchController.clear();
+                    searchQuery = '';
+                    videos.clear();
+                    currentPage = 1;
+                    totalPages = 1;
+                    watchHistoryVideos();
+                  }
+                });
               },
             ),
           ),
@@ -215,22 +244,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                   itemBuilder: (context, index) {
                     if (index < videos.length) {
                       final video = videos[index];
-                      return GestureDetector(
-                        onTap: () async {
-                          logger.d('VIDEO DATA - $video');
-                          // Assuming that the video might not be available
-                          if (video == null) {
-                            // Show a dialog if video data is not available
-                            _showVideoNotFoundDialog();
-                          }
-                        },
-                        child: VideoCard(
-                          videoId: video['_id'],
-                          title: video['title'] ?? 'No Title',
-                          videoLength: formatDuration(video['duration']),
-                          thumbnailUrl: video['thumbnail'] ??
-                              'https://via.placeholder.com/320x180',
-                        ),
+                      return VideoCard(
+                        videoId: video['_id'],
+                        title: video['title'] ?? 'No Title',
+                        videoLength: formatDuration(video['duration']),
+                        thumbnailUrl: video['thumbnail'] ??
+                            'https://via.placeholder.com/320x180',
                       );
                     } else {
                       return Center(
@@ -250,14 +269,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   // Function to refresh the page
   Future<void> _refreshPage() async {
-    if (mounted) {
-      setState(() {
-        videos.clear(); // Clear existing videos
-        currentPage = 1; // Reset pagination
-        totalPages = 1; // Reset total pages
-      });
-    }
-    await homeVideos(); // Fetch the latest videos
+    setState(() {
+      videos.clear(); // Clear existing videos
+      currentPage = 1; // Reset pagination
+      totalPages = 1; // Reset total pages
+    });
+    await watchHistoryVideos(); // Fetch the latest videos
   }
 
   String formatDuration(double? duration) {
@@ -265,34 +282,5 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final minutes = (duration / 60).floor();
     final seconds = (duration % 60).round();
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
-  // Function to show the "Video not found" dialog and dismiss after 5 seconds
-  void _showVideoNotFoundDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Video not found"),
-          content: Text("The video you're looking for could not be found."),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text("OK"),
-            ),
-          ],
-        );
-      },
-    );
-
-    // Dismiss the dialog after 5 seconds if not clicked
-    Future.delayed(const Duration(seconds: 5), () {
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-      _refreshPage(); // Call the refresh function after dismissing the dialog
-    });
   }
 }
