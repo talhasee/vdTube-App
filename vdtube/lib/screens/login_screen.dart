@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       logger.e('Error HERE - $e');
-      _showErrorDialog('Error', 'Something went wrong. Please try again.');
+      _showErrorDialog('Error', 'Something went wrong. Please try again. $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -133,6 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+        automaticallyImplyLeading: false,
       ),
       body: Stack(
         children: [

@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart'; // For file storage
 import 'package:http/http.dart' as http;
+import 'package:typewritertext/typewritertext.dart';
 import 'package:vdtube/constants/constants.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart'; // Add this import
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
-const BASE_URL = Constants.baseUrl;
+const BASE_URL = Constants.baseUrlForUploads;
 var logger = Constants.logger;
 
 class SignUpScreen extends StatefulWidget {
@@ -92,6 +93,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
+  // Snackbar Utility Function
+  void showSnackbar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> signUpUser() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -126,6 +133,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'avatar',
         avatarImage!.path,
       ));
+    } else {
+      showSnackbar('Avatar Image is required');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      return;
     }
 
     request.headers.addAll(headers);
@@ -135,7 +150,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (response.statusCode == 201) {
         logger.d('Sign up successful');
-        logger.d(await response.stream.bytesToString());
 
         // Delete the temporary image after successful registration
         if (avatarImage != null) {
@@ -223,21 +237,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     onTap: () async {
                       await checkAndRequestPermission();
                     },
-                    child: ClipOval(
+
+                    child: Card(
+                      shape: const CircleBorder(), // Ensures the card takes a circular shape
+                      elevation: 4, // Optional: Adds shadow to the card for a nice effect
+                      clipBehavior: Clip.antiAliasWithSaveLayer, // Ensures child content is clipped to the circle
                       child: avatarImage != null
                           ? Image.file(
                               avatarImage!,
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit
-                                  .cover, // Fit the image into the circular area
+                              fit: BoxFit.contain, // Scales and fills the circle while clipping the excess
+                              width: 150, // Matches the circle size
+                              height: 150,
                             )
-                          : const Icon(
-                              Icons.camera_alt,
-                              size: 50,
-                              color: Colors.grey,
+                          : Container(
+                              width: 150, // Diameter of the circle
+                              height: 150,
+                              color: Colors.grey[300], // Background color for empty state
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 75,
+                                color: Colors.grey,
+                              ),
                             ),
                     ),
+
+                    
                   ),
                   const SizedBox(height: 20),
 
@@ -331,15 +355,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ),
 
-          // Show loader if _isLoading is true
-          if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.5),
-              child: Center(
-                child: LoadingAnimationWidget.threeRotatingDots(
-                    color: Colors.red, size: 50),
-              ),
+         // Show loader and TypeWriter text if _isLoading is true
+        if (_isLoading)
+          Container(
+            color: Colors.black.withOpacity(0.5),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,  // Centers the text and loader
+              children: [
+                // TypeWriter Text
+                TypeWriter.text(
+                  'Generating your profile... 😜',
+                  duration: const Duration(milliseconds: 200),
+                  repeat: true,
+                  textAlign: TextAlign.center, // Ensure it is centered
+                  style: const TextStyle(
+                    fontSize: 20.0, // Adjust the font size
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 20),  // Adds some space between text and loader
+                // Loading Animation (Loader)
+                Center(
+                  child: LoadingAnimationWidget.threeRotatingDots(
+                      color: Colors.red, size: 50),
+                ),
+              ],
             ),
+          ),
+
         ],
       ),
     );
