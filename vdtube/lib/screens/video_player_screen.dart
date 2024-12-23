@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -30,10 +31,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   late VideoPlayerController _videoPlayerController;
   late ChewieController _chewieController;
 
+  late ConfettiController _confettiController;
   bool _isVideoInitialized = false;
   bool _isChewieInitialized = false; // Track if ChewieController is initialized
   bool _isDescriptionExpanded = false; //To manage description expansion
   Timer? debounce;
+  String avatarUrl = "";
+  String? username = "";
+  String channelId =
+      ""; //Its same as user ID but its of the user whose has uploaded the video
+  bool subscribedStatus = false;
+  int subscribersCount = 0;
 
   // Likes temporary Data storing locally
   bool isLiked = true;
@@ -42,6 +50,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize the confetti controller
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 1));
   }
 
   // Fetch Access Token
@@ -73,6 +84,32 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         }
         logger.d('isLiked - $isLiked.........likesCount - $likesCount');
       });
+    }
+  }
+
+  //Toggle subscription
+  Future<void> toggleSubscription(bool isSubscribed) async {
+    String? accessToken = await getAccessToken();
+    String? refreshToken = await getRefreshToken();
+
+    var headers = {
+      'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken',
+    };
+
+    final url = Uri.parse('$BASE_URL/subscriptions/ch/$channelId');
+
+    try {
+      final response = await http.post(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        logger.d(
+            'Successfully updated the subscribed status to ----$isSubscribed----');
+      } else {
+        logger.d(
+            'Failed to updated the subscribed status to ----${response.reasonPhrase}----');
+      }
+    } catch (e) {
+      logger.e('Error while updating subscribed status - $e');
     }
   }
 
@@ -120,6 +157,18 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         if (responseData['data'] is List && responseData['data'].isNotEmpty) {
           isLiked = responseData['data'][0]['isLiked'];
           likesCount = responseData['data'][0]['likesCount'];
+
+          final owner = responseData['data'][0]['owner'];
+          // if (mounted) {
+          // setState(() {
+          avatarUrl = owner['avatar'];
+          username = owner['userName'];
+          subscribersCount = owner['subscribersCount'];
+          channelId = owner['_id'];
+          subscribedStatus = owner['isSubscribed'];
+          // });
+          // }
+
           return responseData['data'][0]; // Return first video object
         } else {
           throw Exception('Invalid video data');
@@ -193,6 +242,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     if (_isChewieInitialized) {
       _chewieController.dispose();
     }
+    _confettiController.dispose();
     super.dispose();
   }
 
@@ -393,6 +443,144 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   ),
 
                   const Divider(),
+
+                  //User Profile and subscribe button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              if (_isVideoInitialized) {
+                                _videoPlayerController.pause();
+                              }
+                              Navigator.pushNamed(
+                                context,
+                                '/channelVideos',
+                                arguments: {
+                                  'userId': channelId, //its same as userID    
+                                  'username': username 
+                                },
+                              );
+                            },
+                            // Circular Avatar
+                            child: CircleAvatar(
+                              radius: 30,
+                              backgroundImage: NetworkImage(avatarUrl.isNotEmpty
+                                  ? avatarUrl
+                                  : 'https://dummyimage.com/60x60/000/fff'), // Dummy avatar link
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Username and Subscriber Count
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$username', // Replace with dynamic username
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Subscribers: $subscribersCount', // Replace with dynamic subscriber count
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // StatefulBuilder to rebuild only the subscribe button
+                          StatefulBuilder(
+                            builder: (context, setState) {
+                              return Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Confetti animation widget
+                                  ConfettiWidget(
+                                    confettiController: _confettiController,
+                                    blastDirectionality: BlastDirectionality
+                                        .explosive, // Explodes outward
+                                    shouldLoop: false,
+                                    colors: [
+                                      Colors.blue,
+                                      Colors.green,
+                                      Colors.red,
+                                      Colors.yellow
+                                    ],
+                                    // gravity: 0.5, // Adjust gravity for how fast the confetti falls
+                                    maxBlastForce:
+                                        2.5, // Force of the explosion
+                                    minBlastForce: 1,
+                                    emissionFrequency: 0.02,
+                                    numberOfParticles:
+                                        100, // Number of confetti particles
+                                    minimumSize: Size(1, 3),
+                                    maximumSize: Size(4, 4.5),
+                                    // shape: ConfettiShape.star, // Change shape of the confetti particles to stars
+                                    // confettiWidgetSize: Size(10, 10), // Size of each confetti piece
+                                  ),
+
+                                  TextButton(
+                                    onPressed: () {
+                                      if (!subscribedStatus) {
+                                        //Trigger only when user subscribes a channel
+                                        _confettiController.play();
+                                      }
+
+                                      debounce?.cancel();
+                                      debounce = Timer(
+                                          const Duration(milliseconds: 2500),
+                                          () => toggleSubscription(
+                                              subscribedStatus));
+                                      if (mounted) {
+                                        setState(() {
+                                          subscribedStatus = !subscribedStatus;
+                                        });
+                                      }
+
+                                      // Trigger the confetti animation when button is clicked
+                                    },
+                                    style: TextButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(20.0),
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 14.0, vertical: 6.0),
+                                    ),
+                                    child: Text(
+                                      subscribedStatus
+                                          ? 'SUBSCRIBED'
+                                          : 'SUBSCRIBE',
+                                      style: TextStyle(
+                                          color: subscribedStatus
+                                              ? Colors.green
+                                              : Colors.blue,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: const Text('Comments',

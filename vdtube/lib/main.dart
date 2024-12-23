@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:vdtube/screens/creator_channel_screen.dart';
 import 'package:vdtube/screens/dashboard.dart';
 import 'package:vdtube/screens/home_screen.dart';
 import 'package:vdtube/screens/liked_video_screen.dart';
@@ -51,7 +52,7 @@ class MyApp extends StatelessWidget {
           ),
           toolbarHeight: kToolbarHeight,
           elevation: 0,
-          backgroundColor: Colors.transparent
+          backgroundColor: Colors.transparent,
         ),
       ),
       navigatorObservers: [routeObserver],
@@ -64,6 +65,23 @@ class MyApp extends StatelessWidget {
         '/addVideo': (context) => const AddVideoScreen(),
         '/watchHistory': (context) => const WatchHistoryScreen(),
         '/likedVideos': (context) => const LikedVideoScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/channelVideos') {
+          final args = settings.arguments as Map<String, String?>;
+          final userId = args['userId'];
+          final username = args['username'];
+          
+          if (userId != null && username != null) {
+            return MaterialPageRoute(
+              builder: (context) => CreatorChannelScreen(
+                userId: userId,
+                username: username,
+              ),
+            );
+          }
+        }
+        return null;
       },
     );
   }

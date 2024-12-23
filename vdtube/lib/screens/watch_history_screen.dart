@@ -47,7 +47,7 @@ class _WatchHistoryScreen extends State<WatchHistoryScreen> {
     // _scrollController.addListener(_scrollListener); // Add scroll listener
   }
 
-  Future<void> watchHistoryVideos() async{
+  Future<void> watchHistoryVideos() async {
     if (isLoading) {
       logger.d('No more videos - $currentPage......$totalPages');
       return;
@@ -68,10 +68,7 @@ class _WatchHistoryScreen extends State<WatchHistoryScreen> {
       'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken',
     };
 
-    String apiUrl =
-        '$BASE_URL/user/history';
-    
-
+    String apiUrl = '$BASE_URL/user/history';
 
     try {
       final response = await http.get(
@@ -87,8 +84,7 @@ class _WatchHistoryScreen extends State<WatchHistoryScreen> {
           videos = fetchedVideos; // Append new videos
           //SET TO ONE BECAUSE PAGING NOT IMPLEMENTED RIGHT NOW IN WATCH HISTORY VIDEOS
           totalPages = 1; // Update total pages
-          currentPage =  1; // Next page to fetch
-
+          currentPage = 1; // Next page to fetch
         });
         logger.d('Watch history Videos fetched successfully');
       } else {
@@ -102,7 +98,6 @@ class _WatchHistoryScreen extends State<WatchHistoryScreen> {
       });
     }
   }
-
 
   Future<void> homeVideos() async {
     if (isLoading || currentPage > totalPages) {
@@ -146,14 +141,6 @@ class _WatchHistoryScreen extends State<WatchHistoryScreen> {
       setState(() {
         isLoading = false;
       });
-    }
-  }
-
-  void _scrollListener() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      logger.d('calling again');
-      homeVideos(); // Fetch more videos when nearing the bottom
     }
   }
 
