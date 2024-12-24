@@ -55,6 +55,31 @@ class _SubscribedUsersScreen extends State<SubscribedUsersScreen> {
     fetchSubscribedChannels();
   }
 
+  //Toggle subscription
+  Future<void> toggleSubscription(String? channelId) async {
+    String? accessToken = await Constants.getAccessToken();
+    String? refreshToken = await Constants.getRefreshToken();
+
+    var headers = {
+      'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken',
+    };
+
+    final url = Uri.parse('$BASE_URL/subscriptions/ch/$channelId');
+
+    try {
+      final response = await http.post(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        logger.d('Successfully updated the subscribed status to false');
+      } else {
+        logger.d(
+            'Failed to updated the subscribed status to ----${response.reasonPhrase}----');
+      }
+    } catch (e) {
+      logger.e('Error while updating subscribed status - $e');
+    }
+  }
+
   Future<void> userNameAndUserIdInit() async {
     String? tempId = await Constants.getUserId();
     String? tempUsername = await Constants.getUsername();
@@ -155,6 +180,14 @@ class _SubscribedUsersScreen extends State<SubscribedUsersScreen> {
         });
       }
     }
+  }
+
+  void deleteSubscribedUser(String channelId) {
+    setState(() {
+      //Remove selected User from the list
+      subscribedUsers
+          .removeWhere((user) => user['subscribedChannel']['_id'] == channelId);
+    });
   }
 
   // ignore: unused_element
@@ -325,12 +358,8 @@ class _SubscribedUsersScreen extends State<SubscribedUsersScreen> {
                 Navigator.pushNamed(
                   context,
                   '/channelVideos',
-                  arguments: {
-                    'userId' : userId,
-                    'username': username
-                  },
+                  arguments: {'userId': userId, 'username': username},
                 );
-
               },
               child: CircleAvatar(
                 radius: 35,
@@ -364,7 +393,8 @@ class _SubscribedUsersScreen extends State<SubscribedUsersScreen> {
                       IconButton(
                         icon: const Icon(Icons.more_vert),
                         onPressed: () {
-                          _showBottomMenu(context); // Call the menu function
+                          _showBottomMenu(
+                              context, userId); // Call the menu function
                         },
                       ),
                     ],
@@ -382,7 +412,7 @@ class _SubscribedUsersScreen extends State<SubscribedUsersScreen> {
     );
   }
 
-  void _showBottomMenu(BuildContext context) {
+  void _showBottomMenu(BuildContext context, String? channelId) {
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -396,8 +426,9 @@ class _SubscribedUsersScreen extends State<SubscribedUsersScreen> {
                 title: const Text('Unsubscribe'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Add delete functionality here
-                  //TODO
+                  //Unsubsubscribing functionality
+                  toggleSubscription(channelId);
+                  deleteSubscribedUser(channelId!);
                 },
               ),
             ],

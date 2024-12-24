@@ -9,11 +9,33 @@ const BASE_URL = Constants.baseUrl;
 var logger = Constants.logger;
 Timer? debounce;
 
+// Owner model class
+class Owner {
+  final String userName;
+  final String fullName;
+  final String avatar;
+
+  Owner({
+    required this.userName,
+    required this.fullName,
+    required this.avatar,
+  });
+
+  factory Owner.fromJson(Map<String, dynamic> json) {
+    return Owner(
+      userName: json['userName'],
+      fullName: json['fullName'],
+      avatar: json['avatar'],
+    );
+  }
+}
+
 // Comment model class
 class Comment {
   final String id;
   final String content;
   final String createdAt;
+  final Owner owner;
   int likesCount;
   bool isLiked;
 
@@ -22,6 +44,7 @@ class Comment {
     required this.content,
     required this.createdAt,
     required this.likesCount,
+    required this.owner,
     required this.isLiked,
   });
 
@@ -30,6 +53,7 @@ class Comment {
       id: json['_id'],
       content: json['content'],
       createdAt: json['createdAt'],
+      owner: Owner.fromJson(json['owner']),
       likesCount: json['likesCount'],
       isLiked: json['isLiked'],
     );
@@ -119,20 +143,56 @@ class CommentsWidget extends StatefulWidget {
 
 class _CommentsWidgetState extends State<CommentsWidget> {
   late Future<List<Comment>> _commentsFuture;
-  TextEditingController _commentController = TextEditingController();
+  final TextEditingController _commentController = TextEditingController();
   List<Comment> _comments = [];
+  String currentUsername = '';
+  String currentFullName = '';
+  String currentAvatarUrl = '';
 
   @override
   void initState() {
     super.initState();
     _commentsFuture = CommentService.fetchComments(widget.videoId);
     _fetchInitialComments();
+
+    getCurrentUser();
   }
 
   @override
   void dispose() {
     debounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> getCurrentUser() async {
+    String? accessToken = await Constants.getAccessToken();
+    String? refreshToken = await Constants.getRefreshToken();
+
+    var headers = {
+      'Content-Type': 'application/json',
+      'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken',
+    };
+
+    final url = Uri.parse('$BASE_URL/user/current-user');
+
+    try {
+      final response = await http.get(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+
+        final data = responseBody['data'];
+        if (mounted) {
+          setState(() {
+            currentUsername = data['userName'];
+            currentAvatarUrl = data['avatar'];
+            currentFullName = data['fullName'];
+          });
+        }
+      }
+    } catch (e) {
+      logger.e('Error in getting current user - $e');
+    }
   }
 
   Future<void> _fetchInitialComments() async {
@@ -161,6 +221,10 @@ class _CommentsWidgetState extends State<CommentsWidget> {
       createdAt: DateTime.now().toString(),
       likesCount: 0,
       isLiked: false,
+      owner: Owner(
+          userName: currentUsername,
+          fullName: currentFullName,
+          avatar: currentAvatarUrl),
     );
 
     if (mounted) {
@@ -251,6 +315,8 @@ class _CommentsWidgetState extends State<CommentsWidget> {
       ],
     );
   }
+
+
 }
 
 // Widget to display individual comment
@@ -263,22 +329,42 @@ class CommentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       color: Colors.grey[900],
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              comment.getFormattedDate(),
-              style: const TextStyle(color: Colors.white, fontSize: 12),
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundImage: NetworkImage(comment.owner.avatar),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      comment.owner.userName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      comment.getFormattedDate(),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
               comment.content,
               style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
-            const SizedBox(height: 8),
+            // const SizedBox(height: 2),
             StatefulBuilder(
               builder: (BuildContext context, StateSetter setState) {
                 return Row(
@@ -290,20 +376,15 @@ class CommentCard extends StatelessWidget {
                         size: 20,
                       ),
                       onPressed: () {
-          
                         setState(() {
-                          //Closing already exisiting timer
                           debounce?.cancel();
 
-                          //Starting a new debouncing timer
-                          debounce = Timer(const Duration(milliseconds: 5000),
+                          debounce = Timer(const Duration(milliseconds: 300),
                               () => togglingCommentLike(comment));
 
                           comment.isLiked = !comment.isLiked;
                           comment.likesCount += comment.isLiked ? 1 : -1;
                         });
-
-                        //Api call for toggling like
                       },
                     ),
                     Text('${comment.likesCount}'),
