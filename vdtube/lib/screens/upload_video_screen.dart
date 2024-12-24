@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -104,12 +105,60 @@ class _AddVideoScreenState extends State<AddVideoScreen> {
     }
   }
 
+  // This method will get the Android SDK version
+  Future<int> getAndroidVersion() async {
+    try {
+      if (Platform.isAndroid) {
+        final methodChannel = const MethodChannel('channel_name');
+        final int version =
+            await methodChannel.invokeMethod('getAndroidVersion');
+        return version;
+      }
+      return 0;
+    } on PlatformException catch (_) {
+      return 0;
+    }
+  }
+
   // Check for permission and request if not granted
   Future<void> checkAndRequestPermission(int flag) async {
-    PermissionStatus status = await Permission.storage.request();
+    if (Platform.isAndroid) {
+      final androidVersion = await getAndroidVersion();
+      if (androidVersion >= 33) {
+        // Android 13+ requires separate permissions for photos and videos
+        final photos = await Permission.photos.request();
+        final videos = await Permission.videos.request();
 
-    if (status.isGranted) {
-      // Permission granted, proceed with picking the image
+        if (photos.isGranted && videos.isGranted) {
+          // Can proceed with picking media
+          if (flag == 1) {
+            pickAvatarImage(flag);
+          } else if (flag == 2) {
+            pickVideo();
+          } else {
+            await pickAvatarImage(flag);
+            updateCoverImage();
+          }
+        } else {
+          showPermissionDeniedDialog();
+        }
+      } else {
+        // Android 12 and below uses storage permission
+        if (await Permission.storage.request().isGranted) {
+          if (flag == 1) {
+            pickAvatarImage(flag);
+          } else if (flag == 2) {
+            pickVideo();
+          } else {
+            await pickAvatarImage(flag);
+            updateCoverImage();
+          }
+        } else {
+          showPermissionDeniedDialog();
+        }
+      }
+    } else {
+      // Non-Android platforms
       if (flag == 1) {
         pickAvatarImage(flag);
       } else if (flag == 2) {
@@ -118,14 +167,31 @@ class _AddVideoScreenState extends State<AddVideoScreen> {
         await pickAvatarImage(flag);
         updateCoverImage();
       }
-    } else if (status.isDenied) {
-      // Permission denied, show a dialog or alert explaining why permission is needed
-      showPermissionDeniedDialog();
-    } else if (status.isPermanentlyDenied) {
-      // If the user has permanently denied permission, open the settings page to let them enable it
-      openAppSettings();
     }
   }
+
+  // Check for permission and request if not granted
+  // Future<void> checkAndRequestPermission(int flag) async {
+  //   PermissionStatus status = await Permission.storage.request();
+
+  //   if (status.isGranted) {
+  //     // Permission granted, proceed with picking the image
+  //     if (flag == 1) {
+  //       pickAvatarImage(flag);
+  //     } else if (flag == 2) {
+  //       pickVideo();
+  //     } else {
+  //       await pickAvatarImage(flag);
+  //       updateCoverImage();
+  //     }
+  //   } else if (status.isDenied) {
+  //     // Permission denied, show a dialog or alert explaining why permission is needed
+  //     showPermissionDeniedDialog();
+  //   } else if (status.isPermanentlyDenied) {
+  //     // If the user has permanently denied permission, open the settings page to let them enable it
+  //     openAppSettings();
+  //   }
+  // }
 
   // Show a dialog if the user denies the permission
   void showPermissionDeniedDialog() {
@@ -277,8 +343,7 @@ class _AddVideoScreenState extends State<AddVideoScreen> {
     };
 
     //For uploading task we'll use render server not verel
-    var url =
-        Uri.parse('$uploadUrl/video/');
+    var url = Uri.parse('$uploadUrl/video/');
 
     var request = http.MultipartRequest('POST', url);
 

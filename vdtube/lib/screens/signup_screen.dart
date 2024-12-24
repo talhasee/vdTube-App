@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart'; // For file storage
 import 'package:http/http.dart' as http;
@@ -31,19 +32,46 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
 
+  // This method will get the Android SDK version
+  Future<int> getAndroidVersion() async {
+    try {
+      if (Platform.isAndroid) {
+        final methodChannel = const MethodChannel('channel_name');
+        final int version = await methodChannel.invokeMethod('getAndroidVersion');
+        return version;
+      }
+      return 0;
+    } on PlatformException catch (_) {
+      return 0;
+    }
+  }
+
   // Check for permission and request if not granted
   Future<void> checkAndRequestPermission() async {
-    PermissionStatus status = await Permission.storage.request();
-
-    if (status.isGranted) {
-      // Permission granted, proceed with picking the image
+    if (Platform.isAndroid) {
+      final androidVersion = await getAndroidVersion();
+      if (androidVersion >= 33) {
+        // Android 13+ requires separate permissions for photos and videos
+        final photos = await Permission.photos.request();
+        final videos = await Permission.videos.request();
+        
+        if (photos.isGranted && videos.isGranted) {
+          // Can proceed with picking media
+          pickAvatarImage();
+        } else {
+          showPermissionDeniedDialog();
+        }
+      } else {
+        // Android 12 and below uses storage permission
+        if (await Permission.storage.request().isGranted) {
+          pickAvatarImage();
+        } else {
+          showPermissionDeniedDialog();
+        }
+      }
+    } else {
+      // Non-Android platforms
       pickAvatarImage();
-    } else if (status.isDenied) {
-      // Permission denied, show a dialog or alert explaining why permission is needed
-      showPermissionDeniedDialog();
-    } else if (status.isPermanentlyDenied) {
-      // If the user has permanently denied permission, open the settings page to let them enable it
-      openAppSettings();
     }
   }
 
