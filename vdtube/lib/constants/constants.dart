@@ -34,6 +34,10 @@ class Constants {
     return await secureStorage.read(key: 'username');
   }
 
+  static Future<String?> getUserId() async {
+    return await secureStorage.read(key: 'userId');
+  }
+
   static Future<void> deleteAll() async {
     await secureStorage.deleteAll();
   }

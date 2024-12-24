@@ -69,8 +69,7 @@ class AppDrawer extends StatelessWidget {
             onTap: () {
               // Navigate to subscriptions screen
               Navigator.pop(context); // Close the drawer
-              logger.d("Subscription clicked");
-              // Navigator.pushNamed(context, '/subscriptions');
+              Navigator.pushNamed(context, '/subscribedChannels');
             },
           ),
           // Log out item at the bottom of the drawer

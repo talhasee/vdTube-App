@@ -60,6 +60,12 @@ class _CreatorChannelScreen extends State<CreatorChannelScreen> {
   }
 
   Future<void> fetchUserDetails() async {
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+      });
+    }
+
     String? accessToken = await Constants.getAccessToken();
     String? refreshToken = await Constants.getRefreshToken();
 
@@ -410,11 +416,10 @@ class _CreatorChannelScreen extends State<CreatorChannelScreen> {
                           setState(() {
                             selectedButton =
                                 selectedButton == 'Latest' ? '' : 'Latest';
-                            if(selectedButton.isEmpty){
+                            if (selectedButton.isEmpty) {
                               sortBy = '';
                               sortType = '';
-                            }
-                            else{
+                            } else {
                               sortBy = 'createdAt';
                               sortType = 'desc';
                             }
@@ -436,11 +441,10 @@ class _CreatorChannelScreen extends State<CreatorChannelScreen> {
                           setState(() {
                             selectedButton =
                                 selectedButton == 'Popular' ? '' : 'Popular';
-                            if(selectedButton.isEmpty){
+                            if (selectedButton.isEmpty) {
                               sortBy = '';
                               sortType = '';
-                            }
-                            else{
+                            } else {
                               sortBy = 'views';
                               sortType = 'desc';
                             }
@@ -462,11 +466,10 @@ class _CreatorChannelScreen extends State<CreatorChannelScreen> {
                           setState(() {
                             selectedButton =
                                 selectedButton == 'Oldest' ? '' : 'Oldest';
-                            if(selectedButton.isEmpty){
+                            if (selectedButton.isEmpty) {
                               sortBy = '';
                               sortType = '';
-                            }
-                            else{
+                            } else {
                               sortBy = 'createdAt';
                               sortType = 'asc';
                             }

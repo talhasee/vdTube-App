@@ -6,6 +6,7 @@ import 'package:vdtube/screens/home_screen.dart';
 import 'package:vdtube/screens/liked_video_screen.dart';
 import 'package:vdtube/screens/login_screen.dart';
 import 'package:vdtube/screens/signup_screen.dart';
+import 'package:vdtube/screens/subscribed_users_screen.dart';
 import 'package:vdtube/screens/upload_video_screen.dart';
 import 'package:vdtube/screens/watch_history_screen.dart';
 import 'package:vdtube/utils/splash_screen.dart';
@@ -15,7 +16,7 @@ final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 void main() {
   // Ensure the app is configured with the right system UI overlay style before running
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Set preferred orientations and system UI overlay style
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -25,7 +26,8 @@ void main() {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light, // Changed to light for dark theme
+      statusBarIconBrightness:
+          Brightness.light, // Changed to light for dark theme
       statusBarBrightness: Brightness.dark,
       systemNavigationBarColor: Colors.black,
       systemNavigationBarIconBrightness: Brightness.light,
@@ -65,13 +67,14 @@ class MyApp extends StatelessWidget {
         '/addVideo': (context) => const AddVideoScreen(),
         '/watchHistory': (context) => const WatchHistoryScreen(),
         '/likedVideos': (context) => const LikedVideoScreen(),
+        '/subscribedChannels': (context) => const SubscribedUsersScreen()
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/channelVideos') {
           final args = settings.arguments as Map<String, String?>;
           final userId = args['userId'];
           final username = args['username'];
-          
+
           if (userId != null && username != null) {
             return MaterialPageRoute(
               builder: (context) => CreatorChannelScreen(
@@ -80,7 +83,7 @@ class MyApp extends StatelessWidget {
               ),
             );
           }
-        }
+        } 
         return null;
       },
     );

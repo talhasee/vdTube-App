@@ -323,7 +323,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
                                       //Starting a new debouncing timer
                                       debounce = Timer(
-                                          const Duration(milliseconds: 5000),
+                                          const Duration(milliseconds: 750),
                                           () => sendLikeToServer(isLiked));
                                       if (mounted) {
                                         setState(() {

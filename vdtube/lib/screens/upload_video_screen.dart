@@ -382,7 +382,7 @@ class _AddVideoScreenState extends State<AddVideoScreen> {
       'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken'
     };
 
-    var url = Uri.parse('$BASE_URL/user/cover-image');
+    var url = Uri.parse('$uploadUrl/user/cover-image');
 
     var request = http.MultipartRequest('PATCH', url);
 

@@ -72,6 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
         String accessToken = responseBody['data']['accessToken'];
         String refreshToken = responseBody['data']['refreshToken'];
         String username = responseBody['data']['user']['userName'];
+        String userId = responseBody['data']['user']['_id'];
 
         logger.d('Access Token - $accessToken');
         logger.d('Refresh Token - $refreshToken');
@@ -80,6 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await secureStorage.write(key: 'accessToken', value: accessToken);
         await secureStorage.write(key: 'refreshToken', value: refreshToken);
         await secureStorage.write(key: 'username', value: username);
+        await secureStorage.write(key: 'userId', value: userId);
 
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
