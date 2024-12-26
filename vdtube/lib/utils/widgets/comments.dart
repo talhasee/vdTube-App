@@ -33,7 +33,7 @@ class Owner {
 // Comment model class
 class Comment {
   final String id;
-  final String content;
+  String content;
   final String createdAt;
   final Owner owner;
   int likesCount;
@@ -315,15 +315,80 @@ class _CommentsWidgetState extends State<CommentsWidget> {
       ],
     );
   }
-
-
 }
 
-// Widget to display individual comment
-class CommentCard extends StatelessWidget {
+class CommentCard extends StatefulWidget {
   final Comment comment;
 
   const CommentCard({super.key, required this.comment});
+
+  @override
+  _CommentCardState createState() => _CommentCardState();
+}
+
+class _CommentCardState extends State<CommentCard> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.comment.content);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // Function to handle editing the comment
+  void _editComment(BuildContext context) async {
+    // Show a dialog with a text field to edit the comment
+    String newContent = widget.comment.content;
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Edit Comment"),
+          content: TextField(
+            controller: _controller,
+            maxLines: null,
+            decoration: const InputDecoration(hintText: 'Edit your comment'),
+            onChanged: (value) {
+              newContent = value;
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Update the comment if it's different
+                if (newContent != widget.comment.content) {
+                  if(mounted){
+                    setState(() {
+                      widget.comment.content = newContent;
+                    });
+                    //api call for updating comment
+                    await updateComment(context, widget.comment);
+                  }
+
+                }
+                if (mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -336,35 +401,45 @@ class CommentCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage(comment.owner.avatar),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   children: [
-                    Text(
-                      comment.owner.userName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    CircleAvatar(
+                      backgroundImage:
+                          NetworkImage(widget.comment.owner.avatar),
                     ),
-                    Text(
-                      comment.getFormattedDate(),
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.comment.owner.userName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          widget.comment.getFormattedDate(),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12),
+                        ),
+                      ],
                     ),
                   ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                  onPressed: () => _editComment(context),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              comment.content,
+              widget.comment.content,
               style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
-            // const SizedBox(height: 2),
             StatefulBuilder(
               builder: (BuildContext context, StateSetter setState) {
                 return Row(
@@ -372,7 +447,8 @@ class CommentCard extends StatelessWidget {
                     IconButton(
                       icon: Icon(
                         Icons.thumb_up,
-                        color: comment.isLiked ? Colors.blue : Colors.white,
+                        color:
+                            widget.comment.isLiked ? Colors.blue : Colors.white,
                         size: 20,
                       ),
                       onPressed: () {
@@ -380,22 +456,56 @@ class CommentCard extends StatelessWidget {
                           debounce?.cancel();
 
                           debounce = Timer(const Duration(milliseconds: 300),
-                              () => togglingCommentLike(comment));
+                              () => togglingCommentLike(widget.comment));
 
-                          comment.isLiked = !comment.isLiked;
-                          comment.likesCount += comment.isLiked ? 1 : -1;
+                          widget.comment.isLiked = !widget.comment.isLiked;
+                          widget.comment.likesCount +=
+                              widget.comment.isLiked ? 1 : -1;
                         });
                       },
                     ),
-                    Text('${comment.likesCount}'),
+                    Text('${widget.comment.likesCount}'),
                   ],
                 );
               },
-            )
+            ),
           ],
         ),
       ),
     );
+  }
+}
+
+Future<void> updateComment(BuildContext context, Comment comment) async {
+  final url = Uri.parse('$BASE_URL/comment/c/${comment.id}');
+
+  String? accessToken = await Constants.getAccessToken();
+  String? refreshToken = await Constants.getRefreshToken();
+
+  var headers = {
+    'Content-Type': 'application/json',
+    'Cookie': 'accessToken=$accessToken; refreshToken=$refreshToken',
+  };
+
+  logger.d('Updated comment - ${comment.content}');
+
+  Map<String, String> payload = {'content': comment.content};
+
+  try {
+    final response =
+        await http.patch(url, headers: headers, body: json.encode(payload));
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Comment Updated successfully')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Problem while updating comment - ${response.reasonPhrase}')),
+      );
+    }
+  } catch (e) {
+    logger.e('Error while updating comment - $e');
   }
 }
 

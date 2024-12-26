@@ -231,18 +231,28 @@ class _AddVideoScreenState extends State<AddVideoScreen> {
       // Copy the picked file to the temporary directory
       await File(pickedFile.path).copy(savedImage.path);
 
-      if (flag == 1) {
+      // Check if the image size is greater than 10MB (10MB = 10 * 1024 * 1024 bytes)
+      int fileSizeInBytes = await savedImage.length();
+      if (fileSizeInBytes > 10 * 1024 * 1024) {
+        // Show a popup if the image size is greater than 10MB
         if (mounted) {
-          setState(() {
-            thumbnailImage = savedImage; // Set the saved image as the avatar
-            imagePlaced = true;
-          });
+          _showSizeWarning(context, 'Image size exceeds 10MB.');
+          clearDataFields();
         }
       } else {
-        if (mounted) {
-          setState(() {
-            coverImage = savedImage;
-          });
+        if (flag == 1) {
+          if (mounted) {
+            setState(() {
+              thumbnailImage = savedImage; // Set the saved image as the avatar
+              imagePlaced = true;
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              coverImage = savedImage;
+            });
+          }
         }
       }
     }
@@ -250,16 +260,46 @@ class _AddVideoScreenState extends State<AddVideoScreen> {
 
   //Pick Video From Gallery
   Future<void> pickVideo() async {
-    final pickdedFile = await _picker.pickVideo(source: ImageSource.gallery);
+    final pickedFile = await _picker.pickVideo(source: ImageSource.gallery);
 
-    if (pickdedFile != null) {
+    if (pickedFile != null) {
       if (mounted) {
+        // Check if the video size is greater than 40MB (40MB = 40 * 1024 * 1024 bytes)
+        int fileSizeInBytes = await File(pickedFile.path).length();
+        if (fileSizeInBytes > 40 * 1024 * 1024) {
+          // Show a popup if the video size is greater than 40MB
+          if (mounted) {
+            _showSizeWarning(context, 'Video size exceeds 40MB.');
+            clearDataFields();
+          }
+        }
         setState(() {
-          videoFile = File(pickdedFile.path);
-          videoName = pickdedFile.name; //Extract the name of the video
+          videoFile = File(pickedFile.path);
+          videoName = pickedFile.name; //Extract the name of the video
         });
       }
     }
+  }
+
+  // Function to show size warning popup
+  void _showSizeWarning(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('File Size Warning'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the popup
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // Show popup while uploading
